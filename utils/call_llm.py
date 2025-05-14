@@ -14,6 +14,20 @@ def call_llm(prompt: str) -> str:
     return response.content[0].text
 
 if __name__ == "__main__":
-    test_prompt = "Hello, how are you?"
-    response = call_llm(test_prompt)
-    print(f"Test successful. Response: {response}")
+if __name__ == "__main__":
+    test_prompts = [
+        "Hello, how are you?",
+        "Explain what a Python decorator is in simple terms for a junior developer",
+        "What are the key benefits of using Docker?"
+    ]
+    
+    print("Testing LLM calls with multiple prompts...")
+    for i, prompt in enumerate(test_prompts, 1):
+        print(f"\nTest {i}:")
+        print(f"Prompt: {prompt}")
+        try:
+            response = call_llm(prompt)
+            print(f"Response: {response[:200]}...")
+            print("✓ Success")
+        except Exception as e:
+            print(f"✗ Error: {str(e)}")
