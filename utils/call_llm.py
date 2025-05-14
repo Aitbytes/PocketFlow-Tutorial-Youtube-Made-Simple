@@ -1,15 +1,26 @@
-from anthropic import AnthropicVertex
+from anthropic import Anthropic
 import os
 
 def call_llm(prompt: str) -> str:
-    client = AnthropicVertex(
-        region=os.getenv("ANTHROPIC_REGION", "us-east5"),
-        project_id=os.getenv("ANTHROPIC_PROJECT_ID", "")
+    """
+    Call Anthropic's Claude LLM with a prompt and return the response.
+    
+    Args:
+        prompt: The text prompt to send to the LLM
+        
+    Returns:
+        str: The LLM's response text
+        
+    Raises:
+        Exception: If the API call fails or the response is invalid
+    """
+    client = Anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY")
     )
     response = client.messages.create(
         max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-        model="claude-3-7-sonnet@20250219"
+        model="claude-3-sonnet-20240229",
+        messages=[{"role": "user", "content": prompt}]
     )
     return response.content[0].text
 
