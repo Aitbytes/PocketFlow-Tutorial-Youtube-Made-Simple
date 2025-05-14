@@ -23,26 +23,26 @@ def main():
         description="Process a YouTube video to extract topics, questions, and generate ELI5 answers."
     )
     parser.add_argument(
-        "--url", 
+        "--source", 
         type=str, 
-        help="YouTube video URL to process",
+        help="YouTube video URL or local video file path to process",
         required=False
     )
     args = parser.parse_args()
     
-    # Get YouTube URL from arguments or prompt user
-    url = args.url
-    if not url:
-        url = input("Enter YouTube URL to process: ")
+    # Get source from arguments or prompt user
+    source = args.source
+    if not source:
+        source = input("Enter YouTube URL or local video file path to process: ")
     
-    logger.info(f"Starting YouTube content processor for URL: {url}")
+    logger.info(f"Starting content processor for source: {source}")
 
     # Create flow
     flow = create_youtube_processor_flow()
     
     # Initialize shared memory
     shared = {
-        "url": url
+        "source": source
     }
     
     # Run the flow
@@ -51,7 +51,7 @@ def main():
     # Report success and output file location
     print("\n" + "=" * 50)
     print("Processing completed successfully!")
-    print(f"Output HTML file: {os.path.abspath('output.html')}")
+    print(f"Output Markdown file: {os.path.abspath('output.md')}")
     print("=" * 50 + "\n")
 
     return 0

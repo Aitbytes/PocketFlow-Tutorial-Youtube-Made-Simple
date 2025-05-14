@@ -3,8 +3,8 @@ import yaml
 import logging
 from pocketflow import Node, BatchNode, Flow
 from utils.call_llm import call_llm
-from utils.youtube_processor import get_video_info
-from utils.html_generator import html_generator
+from utils.media_processor import MediaProcessor
+from utils.markdown_generator import generate_markdown
 
 # Set up logging
 logging.basicConfig(
@@ -15,29 +15,28 @@ logger = logging.getLogger(__name__)
 
 # Define the specific nodes for the YouTube Content Processor
 
-class ProcessYouTubeURL(Node):
-    """Process YouTube URL to extract video information"""
+class ProcessMediaSource(Node):
+    """Process input source (YouTube URL or local file)"""
     def prep(self, shared):
-        """Get URL from shared"""
-        return shared.get("url", "")
+        """Get source from shared"""
+        return shared.get("source", "")
     
-    def exec(self, url):
-        """Extract video information"""
-        if not url:
-            raise ValueError("No YouTube URL provided")
+    def exec(self, source):
+        """Process media source"""
+        if not source:
+            raise ValueError("No source provided")
         
-        logger.info(f"Processing YouTube URL: {url}")
-        video_info = get_video_info(url)
+        logger.info(f"Processing source: {source}")
+        processor = MediaProcessor()
+        source_info = processor.process_source(source)
         
-        if "error" in video_info:
-            raise ValueError(f"Error processing video: {video_info['error']}")
-        
-        return video_info
+        return source_info
     
     def post(self, shared, prep_res, exec_res):
-        """Store video information in shared"""
-        shared["video_info"] = exec_res
-        logger.info(f"Video title: {exec_res.get('title')}")
+        """Store source information in shared"""
+        shared["source_info"] = exec_res
+        logger.info(f"Title: {exec_res.get('title')}")
+        logger.info(f"Source type: {exec_res.get('type')}")
         logger.info(f"Transcript length: {len(exec_res.get('transcript', ''))}")
         return "default"
 
@@ -245,77 +244,46 @@ questions:
         logger.info(f"Processed content for {len(exec_res_list)} topics")
         return "default"
 
-class GenerateHTML(Node):
-    """Generate HTML output from processed content"""
+class GenerateMarkdown(Node):
+    """Generate Markdown output from processed content"""
     def prep(self, shared):
-        """Get video info and topics from shared"""
-        video_info = shared.get("video_info", {})
+        """Get source info and topics from shared"""
+        source_info = shared.get("source_info", {})
         topics = shared.get("topics", [])
         
         return {
-            "video_info": video_info,
+            "source_info": source_info,
             "topics": topics
         }
     
     def exec(self, data):
-        """Generate HTML using html_generator"""
-        video_info = data["video_info"]
+        """Generate Markdown using markdown_generator"""
+        source_info = data["source_info"]
         topics = data["topics"]
         
-        title = video_info.get("title", "YouTube Video Summary")
-        thumbnail_url = video_info.get("thumbnail_url", "")
-        
-        # Prepare sections for HTML
-        sections = []
-        for topic in topics:
-            # Skip topics without questions
-            if not topic.get("questions"):
-                continue
-                
-            # Use rephrased_title if available, otherwise use original title
-            section_title = topic.get("rephrased_title", topic.get("title", ""))
-            
-            # Prepare bullets for this section
-            bullets = []
-            for question in topic.get("questions", []):
-                # Use rephrased question if available, otherwise use original
-                q = question.get("rephrased", question.get("original", ""))
-                a = question.get("answer", "")
-                
-                # Only add bullets if both question and answer have content
-                if q.strip() and a.strip():
-                    bullets.append((q, a))
-            
-            # Only include section if it has bullets
-            if bullets:
-                sections.append({
-                    "title": section_title,
-                    "bullets": bullets
-                })
-        
-        # Generate HTML
-        html_content = html_generator(title, thumbnail_url, sections)
-        return html_content
+        # Generate Markdown
+        markdown_content = generate_markdown(source_info, topics)
+        return markdown_content
     
     def post(self, shared, prep_res, exec_res):
-        """Store HTML output in shared"""
-        shared["html_output"] = exec_res
+        """Store Markdown output in shared"""
+        shared["markdown_output"] = exec_res
         
-        # Write HTML to file
-        with open("output.html", "w") as f:
+        # Write Markdown to file
+        with open("output.md", "w") as f:
             f.write(exec_res)
         
-        logger.info("Generated HTML output and saved to output.html")
+        logger.info("Generated Markdown output and saved to output.md")
         return "default"
 
 # Create the flow
 def create_youtube_processor_flow():
     """Create and connect the nodes for the YouTube processor flow"""
     # Create nodes
-    process_url = ProcessYouTubeURL(max_retries=2, wait=10)
+    process_url = ProcessMediaSource(max_retries=2, wait=10)
     extract_topics_and_questions = ExtractTopicsAndQuestions(max_retries=2, wait=10)
     process_content = ProcessContent(max_retries=2, wait=10)
-    generate_html = GenerateHTML(max_retries=2, wait=10)
+    generate_html = GenerateMarkdown(max_retries=2, wait=10)
     
     # Connect nodes
     process_url >> extract_topics_and_questions >> process_content >> generate_html
