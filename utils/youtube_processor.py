@@ -39,9 +39,25 @@ def get_video_info(url):
         return {"error": str(e)}
 
 if __name__ == "__main__":
-    test_url = "https://www.youtube.com/watch?v=_1f-o0nqpEI&t"
-    result = get_video_info(test_url)
-    print(f"Title: {result.get('title')}")
-    print(f"Transcript: {result.get('transcript', '')[:150]}...") 
-    print(f"Thumbnail URL: {result.get('thumbnail_url')}")
-    print(f"Video ID: {result.get('video_id')}")
+    test_urls = [
+        "https://www.youtube.com/watch?v=_1f-o0nqpEI&t",  # Valid URL
+        "https://youtu.be/_1f-o0nqpEI",                   # Short URL
+        "https://invalid-url.com/watch?v=123"             # Invalid URL
+    ]
+    
+    print("Testing YouTube processor with multiple URLs...")
+    for i, url in enumerate(test_urls, 1):
+        print(f"\nTest {i}: {url}")
+        try:
+            result = get_video_info(url)
+            if "error" in result:
+                print(f"✗ Error: {result['error']}")
+                continue
+                
+            print("✓ Success")
+            print(f"Title: {result['title']}")
+            print(f"Video ID: {result['video_id']}")
+            print(f"Transcript preview: {result['transcript'][:100]}...")
+            print(f"Thumbnail URL: {result['thumbnail_url']}")
+        except Exception as e:
+            print(f"✗ Error: {str(e)}")
