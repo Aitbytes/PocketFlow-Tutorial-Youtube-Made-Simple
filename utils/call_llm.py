@@ -9,7 +9,7 @@ def call_llm(prompt: str) -> str:
     response = client.messages.create(
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
-        model="claude-3-7-sonnet@20250219"
+        model="claude-3-5-sonnet"
     )
     return response.content[0].text
 
