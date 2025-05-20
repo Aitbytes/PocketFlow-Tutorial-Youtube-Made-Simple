@@ -1,14 +1,16 @@
 # Explain Youtube Podcast To Me Like I'm 5
 
 ## Project Requirements
-This project takes a YouTube podcast URL, extracts the transcript, identifies key topics and Q&A pairs, simplifies them for children, and generates an HTML report with the results.
+This project takes either a YouTube podcast URL or a local video file, extracts the transcript, identifies key topics and Q&A pairs, simplifies them for children, and generates an HTML report with the results.
 
 ## Utility Functions
 
 1. **LLM Calls** (`utils/call_llm.py`)
 
-2. **YouTube Processing** (`utils/youtube_processor.py`)
-   - Get video title, transcript and thumbnail
+2. **Media Processing** (`utils/media_processor.py`)
+   - Process YouTube URLs: Get video title, transcript and thumbnail
+   - Process local files: Extract audio, transcribe, get metadata
+   - Common interface for both input types
 
 3. **HTML Generator** (`utils/html_generator.py`)
    - Create formatted report with topics, Q&As and simple explanations
@@ -45,12 +47,16 @@ The shared memory structure will be organized as follows:
 
 ```python
 shared = {
+    "input": {
+        "type": str,          # "youtube" or "local"
+        "source": str,        # YouTube URL or local file path
+    },
     "video_info": {
-        "url": str,            # YouTube URL
-        "title": str,          # Video title
+        "title": str,          # Video title or filename
         "transcript": str,     # Full transcript
-        "thumbnail_url": str,  # Thumbnail image URL
-        "video_id": str        # YouTube video ID
+        "thumbnail_url": str,  # Thumbnail URL (YouTube) or None (local)
+        "video_id": str,       # YouTube video ID or None (local)
+        "duration": float,     # Video duration in seconds
     },
     "topics": [
         {
@@ -73,12 +79,20 @@ shared = {
 
 ## Node Designs
 
-### 1. ProcessYouTubeURL
-- **Purpose**: Process YouTube URL to extract video information
+### 1. ProcessVideoInput
+- **Purpose**: Process either YouTube URL or local video file to extract information
 - **Design**: Regular Node (no batch/async)
 - **Data Access**: 
-  - Read: URL from shared store
+  - Read: Input type and source from shared store
   - Write: Video information to shared store
+- **Implementation Details**:
+  - Detects input type (YouTube URL vs local file)
+  - For YouTube: Uses YouTube API to get metadata and transcript
+  - For local files: 
+    - Extracts audio from video
+    - Uses speech-to-text to generate transcript
+    - Gets basic metadata (filename, duration)
+  - Provides unified output format for downstream nodes
 
 ### 2. ExtractTopicsAndQuestions
 - **Purpose**: Extract interesting topics from transcript and generate questions for each topic
