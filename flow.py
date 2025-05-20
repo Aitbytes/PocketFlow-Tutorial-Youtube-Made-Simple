@@ -151,7 +151,7 @@ class ProcessContent(BatchNode):
         topic_title = topic["title"]
         questions = [q["original"] for q in topic["questions"]]
         
-        prompt = f"""You are a content simplifier for children. Given a topic and questions from a YouTube video, rephrase the topic title and questions to be clearer, and provide simple ELI5 (Explain Like I'm 5) answers.
+        prompt = f"""You are a content explainer for junior software engineers. Given a topic and questions from a YouTube video, rephrase the topic title and questions to be clearer, and provide clear answers.
 
 TOPIC: {topic_title}
 
@@ -181,7 +181,7 @@ questions:
     rephrased: |
         Interesting question in 15 words
     answer: |
-        Simple answer that a 5-year-old could understand in 100 words
+        Simple answer that a junior SE could understand in a 100 words
   - original: |
         {questions[1] if len(questions) > 1 else ''}
     ...
