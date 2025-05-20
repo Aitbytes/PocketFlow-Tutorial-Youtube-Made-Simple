@@ -1,0 +1,15 @@
+version: '3'
+services:
+  ytb-summarize:
+    build:
+        context: .
+    container_name: ytb-summarizer
+    environment:
+        ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+        OPENAI_API_KEY: ${OPENAI_API_KEY}
+    args:
+        name: value
+    entrypoint: python /app/utils/media_processor.py
+    volumes:
+      - "./test_video.mp4:/app/test_video.mp4:ro"
+    #command: "--url https://www.youtube.com/watch?v=OUJgahHjAKU"
