@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 import os
-from flow import create_youtube_processor_flow
+from flow import create_content_processor_flow
 
 # Set up logging
 logging.basicConfig(
@@ -20,29 +20,55 @@ def main():
     
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description="Process a YouTube video to extract topics, questions, and generate ELI5 answers."
+        description="Process a YouTube video or local video file to extract topics, questions, and generate ELI5 answers."
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--url", 
         type=str, 
-        help="YouTube video URL to process",
-        required=False
+        help="YouTube video URL to process"
+    )
+    group.add_argument(
+        "--file",
+        type=str,
+        help="Local video file path to process"
     )
     args = parser.parse_args()
     
-    # Get YouTube URL from arguments or prompt user
-    url = args.url
-    if not url:
-        url = input("Enter YouTube URL to process: ")
+    # Get input source from arguments or prompt user
+    input_source = None
+    input_type = None
     
-    logger.info(f"Starting YouTube content processor for URL: {url}")
+    if args.url:
+        input_source = args.url
+        input_type = "youtube"
+    elif args.file:
+        input_source = args.file
+        input_type = "local"
+    else:
+        while True:
+            choice = input("Enter input type (1 for YouTube URL, 2 for local file): ").strip()
+            if choice == "1":
+                input_source = input("Enter YouTube URL to process: ").strip()
+                input_type = "youtube"
+                break
+            elif choice == "2":
+                input_source = input("Enter local video file path: ").strip()
+                input_type = "local"
+                break
+            print("Invalid choice. Please enter 1 or 2.")
+    
+    logger.info(f"Starting content processor for {input_type}: {input_source}")
 
     # Create flow
-    flow = create_youtube_processor_flow()
+    flow = create_content_processor_flow()
     
     # Initialize shared memory
     shared = {
-        "url": url
+        "input": {
+            "type": input_type,
+            "source": input_source
+        }
     }
     
     # Run the flow
