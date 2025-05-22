@@ -7,9 +7,16 @@ services:
     environment:
         ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
         OPENAI_API_KEY: ${OPENAI_API_KEY}
+        GOOGLE_API_KEY: ${GOOGLE_API_KEY}
     args:
         name: value
-    entrypoint: python /app/utils/media_processor.py
+    
+    
+    #entrypoint: python /app/utils/call_llm.py
+    #
+    #
     volumes:
-      - "./test_video.mp4:/app/test_video.mp4:ro"
-    #command: "--url https://www.youtube.com/watch?v=OUJgahHjAKU"
+      - "~/Videos/Presentation_Hashicorp_Vault_Cert/2025-05-15 15-01-58.mkv:/app/Presentation_Hashicorp_Vault_Cert.mp4:ro"
+      - "./output:/app/output"
+      - "./cache:/app/cache"
+    command: "--url https://www.youtube.com/watch?v=HR3fLfHu9U4"
