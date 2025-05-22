@@ -26,7 +26,7 @@ def get_video_info(url):
         thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
         
         # Get transcript
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, ('en', 'fr') )
         transcript = " ".join([entry["text"] for entry in transcript_list])
         
         return {
