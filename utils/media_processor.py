@@ -1,11 +1,52 @@
 from typing import Dict, Optional
 import os
 import whisper
+import json
+import hashlib
+from datetime import datetime
+from pathlib import Path
 
 from moviepy import VideoFileClip
 from openai import OpenAI
 
-from youtube_processor import get_video_info
+try:
+    from youtube_processor import get_video_info
+except ModuleNotFoundError:
+    from utils.youtube_processor import get_video_info
+
+
+def get_cache_key(source: str, input_type: str) -> str:
+    """Generate a unique cache key for the source."""
+    # For YouTube, use video ID or URL
+    if input_type == "youtube":
+        return hashlib.md5(source.encode()).hexdigest()
+    
+    # For local files, use file path and modification time
+    file_path = Path(source)
+    if file_path.exists():
+        mtime = os.path.getmtime(source)
+        return hashlib.md5(f"{source}_{mtime}".encode()).hexdigest()
+    return hashlib.md5(source.encode()).hexdigest()
+
+def load_cache() -> Dict:
+    """Load the transcription cache from disk."""
+    cache_file = Path("./cache/transcription_cache.json")
+    if cache_file.exists():
+        try:
+            with open(cache_file, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+def save_cache(cache: Dict) -> None:
+    """Save the transcription cache to disk."""
+
+    import os
+    cache_dir = "./cache"
+    os.makedirs(cache_dir, exist_ok=True)
+    with open(os.path.join(cache_dir,"transcription_cache.json") , "w") as f:
+        json.dump(cache, f, indent=2)
 
 def process_media_input(source: str, input_type: str) -> Dict:
     """
@@ -30,6 +71,14 @@ def process_media_input(source: str, input_type: str) -> Dict:
     """
     if input_type not in ["youtube", "local"]:
         raise ValueError("input_type must be either 'youtube' or 'local'")
+        
+    # Check cache first
+    cache_key = get_cache_key(source, input_type)
+    cache = load_cache()
+    
+    if cache_key in cache:
+        print("Using cached transcription")
+        return cache[cache_key]
 
     if input_type == "youtube":
         info = get_video_info(source)
@@ -44,13 +93,20 @@ def process_media_input(source: str, input_type: str) -> Dict:
         except:
             duration = None
             
-        return {
+        result = {
             "title": info["title"],
             "transcript": info["transcript"],
             "thumbnail_url": info["thumbnail_url"],
             "video_id": info["video_id"],
-            "duration": duration
+            "duration": duration,
+            "cached_at": datetime.now().isoformat()
         }
+        
+        # Save to cache
+        cache[cache_key] = result
+        save_cache(cache)
+        
+        return result
     
     else:  # local file
         if not os.path.exists(source):
@@ -113,13 +169,20 @@ def process_media_input(source: str, input_type: str) -> Dict:
         os.remove(audio_path)
         video.close()
         
-        return {
+        result = {
             "title": os.path.basename(source),
             "transcript": transcript,
             "thumbnail_url": None,
             "video_id": None,
-            "duration": duration
+            "duration": duration,
+            "cached_at": datetime.now().isoformat()
         }
+        
+        # Save to cache
+        cache[cache_key] = result
+        save_cache(cache)
+        
+        return result
 
 if __name__ == "__main__":
     # Test YouTube
