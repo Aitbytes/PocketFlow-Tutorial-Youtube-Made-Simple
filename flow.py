@@ -4,6 +4,7 @@ import logging
 from pocketflow import Node, BatchNode, Flow
 from utils.call_llm import call_llm
 from utils.youtube_processor import get_video_info
+from utils.media_processor import process_media_input
 from utils.html_generator import html_generator
 
 # Set up logging
@@ -15,22 +16,33 @@ logger = logging.getLogger(__name__)
 
 # Define the specific nodes for the YouTube Content Processor
 
-class ProcessYouTubeURL(Node):
-    """Process YouTube URL to extract video information"""
+class ProcessVideoInput(Node):
+    """Process either YouTube URL or local video file to extract information"""
     def prep(self, shared):
-        """Get URL from shared"""
-        return shared.get("url", "")
+        """Get input type and source from shared"""
+        input_data = shared.get("input", {})
+        return input_data
     
-    def exec(self, url):
-        """Extract video information"""
-        if not url:
-            raise ValueError("No YouTube URL provided")
+    def exec(self, input_data):
+        """Extract video information based on input type"""
+        input_type = input_data.get("type")
+        source = input_data.get("source")
         
-        logger.info(f"Processing YouTube URL: {url}")
-        video_info = get_video_info(url)
+        if not input_type or not source:
+            raise ValueError("Invalid input data")
         
-        if "error" in video_info:
-            raise ValueError(f"Error processing video: {video_info['error']}")
+        if input_type == "youtube":
+            logger.info(f"Processing YouTube URL: {source}")
+            video_info = get_video_info(source)
+            if "error" in video_info:
+                raise ValueError(f"Error processing video: {video_info['error']}")
+        elif input_type == "local":
+            logger.info(f"Processing local file: {source}")
+            video_info = process_media_input(source, input_type)
+            if "error" in video_info:
+                raise ValueError(f"Error processing video: {video_info['error']}")
+        else:
+            raise ValueError(f"Unsupported input type: {input_type}")
         
         return video_info
     
@@ -224,7 +236,6 @@ questions:
                 
                 # Update topic with rephrased title
                 topic["rephrased_title"] = processed["rephrased_title"]
-                
                 # Map of original question to processed question
                 orig_to_processed = {
                     q["original"]: q
@@ -301,26 +312,40 @@ class GenerateHTML(Node):
         """Store HTML output in shared"""
         shared["html_output"] = exec_res
         
-        # Write HTML to file
-        with open("output.html", "w") as f:
+        # Create output directory if it doesn't exist
+        import os
+        output_dir = "./output"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Get title from video info and sanitize it for filename
+        title = prep_res["video_info"].get("title", "untitled")
+        # Remove or replace invalid filename characters
+        import re
+        safe_title = re.sub(r'[<>:"/\\|?*]', '_', title)
+        # Limit filename length
+        safe_title = safe_title[:100] if len(safe_title) > 100 else safe_title
+        
+        # Write HTML to file in output directory
+        output_path = os.path.join(output_dir, f"{safe_title}.html")
+        with open(output_path, "w", encoding='utf-8') as f:
             f.write(exec_res)
         
         logger.info("Generated HTML output and saved to output.html")
         return "default"
 
 # Create the flow
-def create_youtube_processor_flow():
-    """Create and connect the nodes for the YouTube processor flow"""
+def create_content_processor_flow():
+    """Create and connect the nodes for the content processor flow"""
     # Create nodes
-    process_url = ProcessYouTubeURL(max_retries=2, wait=10)
+    process_input = ProcessVideoInput(max_retries=2, wait=10)
     extract_topics_and_questions = ExtractTopicsAndQuestions(max_retries=2, wait=10)
     process_content = ProcessContent(max_retries=2, wait=10)
     generate_html = GenerateHTML(max_retries=2, wait=10)
     
     # Connect nodes
-    process_url >> extract_topics_and_questions >> process_content >> generate_html
+    process_input >> extract_topics_and_questions >> process_content >> generate_html
     
     # Create flow
-    flow = Flow(start=process_url)
+    flow = Flow(start=process_input)
     
     return flow
