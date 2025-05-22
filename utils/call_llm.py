@@ -1,9 +1,10 @@
-from anthropic import Anthropic
+#import google.generativeai as genai
 import os
+from google import genai
 
 def call_llm(prompt: str) -> str:
     """
-    Call Anthropic's Claude LLM with a prompt and return the response.
+    Call Google's Gemini LLM with a prompt and return the response.
     
     Args:
         prompt: The text prompt to send to the LLM
@@ -14,15 +15,14 @@ def call_llm(prompt: str) -> str:
     Raises:
         Exception: If the API call fails or the response is invalid
     """
-    client = Anthropic(
-        api_key=os.getenv("ANTHROPIC_API_KEY")
+    client = genai.Client()
+    response = client.models.generate_content(
+    model='gemini-2.5-flash-preview-05-20',
+    contents=prompt
     )
-    response = client.messages.create(
-        max_tokens=1024,
-        model="claude-3-5-sonnet-latest",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.content[0].text
+
+    
+    return response.text
 
 if __name__ == "__main__":
     test_prompt = "Hello, how are you?"
